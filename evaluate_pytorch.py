@@ -36,12 +36,12 @@ config_name = "config"
 @hydra.main(version_base=None, config_path="conf", config_name=config_name)
 def my_app(cfg: DictConfig) -> None:
     
-    dataset_combination = ["MT"] #"LiveFActinDataset", "EM", "F-actin", "ER", "MT", "MT-SMLM_registered"
-    model_combination = ["wgan"]  # "unet", "rcan", "dfcan", "wdsr", "wgan", "esrganplus", "cddpm", "srgan"
-    batch_size_combination = [2]
-    num_epochs_combination = [200]
-    lr_combination = [(0.001, 0.001),(0.0001, 0.0001)] 
-    scheduler_combination = ['Fixed', 'OneCycle', 'CosineDecay'] #'Fixed', 'ReduceOnPlateau', 'OneCycle', 'CosineDecay', 'MultiStepScheduler'
+    dataset_combination = ["ER"] #"LiveFActinDataset", "EM", "F-actin", "ER", "MT", "MT-SMLM_registered"
+    model_combination = ["esrganplus"]  # "unet", "rcan", "dfcan", "wdsr", "wgan", "esrganplus", "cddpm", "srgan"
+    batch_size_combination = [1]
+    num_epochs_combination = [5]
+    lr_combination = [(0.0005, 0.0005)] 
+    scheduler_combination = ['OneCycle'] #'Fixed', 'ReduceOnPlateau', 'OneCycle', 'CosineDecay', 'MultiStepScheduler'
     optimizer_combination = ['adam']  #'adam', 'adamW', 'adamax', 'rms_prop', 'sgd'
     
     for final_critic_steps in [5]:
@@ -65,7 +65,7 @@ def my_app(cfg: DictConfig) -> None:
                             for scheduler in scheduler_combination:
                                 for optimizer in optimizer_combination:
                                     
-                                    base_folder = 'results'
+                                    base_folder = 'prueba'
 
                                     # base_folder = f'different_results/GAN_LR_0_001/{config_name}'
                                     # base_folder = f'different_results/ESRGAN+'
@@ -105,10 +105,12 @@ def my_app(cfg: DictConfig) -> None:
                                         elif cfg.model_name == "esrganplus":
                                             number_of_critic_steps = final_critic_steps # cfg.used_model.n_critic_steps
                                             cfg.used_model.n_critic_steps = number_of_critic_steps
+
                                             base_folder=f"{base_folder}/cs_{number_of_critic_steps}"
                                         elif cfg.model_name == "srgan":
                                             number_of_critic_steps = final_critic_steps # cfg.used_model.n_critic_steps
                                             cfg.used_model.n_critic_steps = number_of_critic_steps
+
                                             base_folder=f"{base_folder}/cs_{number_of_critic_steps}"
                                     '''
 

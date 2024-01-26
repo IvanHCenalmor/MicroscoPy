@@ -120,8 +120,6 @@ class ModelsTrainer:
         self.verbose = verbose
         self.data_on_memory = data_on_memory
 
-        self.already_trained = False
-
         save_folder = "scale" + str(self.scale_factor)
 
         if self.additional_folder:
@@ -205,15 +203,6 @@ class ModelsTrainer:
         print("\tGen scheduler: {}".format(self.lr_scheduler_name))
         print("\tDisc scheduler: {}".format(self.discriminator_lr_scheduler))
         print("-" * 10)
-
-    def launch(self):
-        self.prepare_data()
-        self.train_model()
-
-        self.predict_images()
-        self.eval_model()
-
-        return self.history
 
     def prepare_data(self):
         raise NotImplementedError("prepare_data() not implemented.")
@@ -598,11 +587,11 @@ class TensorflowTrainer(ModelsTrainer):
             hr_images = np.expand_dims(hr_images, axis=-1)
             lr_images = np.expand_dims(lr_images, axis=-1)
 
-            tf.keras.preprocessing.image.save_img(
+            io.imsave(
                 os.path.join(self.saving_path, result_folder_name, "lr_img_from_dataset.tif"),
                 lr_images[0]
             )
-            tf.keras.preprocessing.image.save_img(
+            io.imsave(
                 os.path.join(self.saving_path, result_folder_name, "hr_img_from_dataset.tif"),
                 hr_images[0]
             )
@@ -655,11 +644,11 @@ class TensorflowTrainer(ModelsTrainer):
                 )
                 print(f'After paddins: {hr_images.shape}')
 
-                tf.keras.preprocessing.image.save_img(
-                os.path.join(self.saving_path, result_folder_name, "lr_img_after_padding.tif"),
-                lr_images[0]
+                io.imsave(
+                    os.path.join(self.saving_path, result_folder_name, "lr_img_after_padding.tif"),
+                    lr_images[0]
                 )
-                tf.keras.preprocessing.image.save_img(
+                io.imsave(
                     os.path.join(self.saving_path, result_folder_name, "hr_img_after_padding.tif"),
                     hr_images[0]
                 )
@@ -719,7 +708,7 @@ class TensorflowTrainer(ModelsTrainer):
             else:
                 aux_prediction = model.predict(lr_images, batch_size=1)
 
-            tf.keras.preprocessing.image.save_img(
+            io.imsave(
                 os.path.join(self.saving_path, result_folder_name, "aux_prediction.tif"),
                 aux_prediction[0]
             )
@@ -734,7 +723,7 @@ class TensorflowTrainer(ModelsTrainer):
                 )
                 print(f'After removing padding: {aux_prediction.shape}')
 
-            tf.keras.preprocessing.image.save_img(
+            io.imsave(
                 os.path.join(self.saving_path, result_folder_name, "aux_prediction_after_removing_padding.tif"),
                 aux_prediction[0]
             )
@@ -742,7 +731,7 @@ class TensorflowTrainer(ModelsTrainer):
             # aux_prediction = datasets.normalization(aux_prediction)
             aux_prediction = np.clip(aux_prediction, a_min=0.0, a_max=1.0)
 
-            tf.keras.preprocessing.image.save_img(
+            io.imsave(
                 os.path.join(self.saving_path, result_folder_name, "aux_prediction_after_clip.tif"),
                 aux_prediction[0]
             )
@@ -774,11 +763,9 @@ class TensorflowTrainer(ModelsTrainer):
 
             print(image.shape)
 
-            tf.keras.preprocessing.image.save_img(
+            io.imsave(
                 os.path.join(self.saving_path, "predicted_images", result_folder_name, self.test_filenames[i]),
-                image,
-                data_format=None,
-                file_format=None,
+                image
             )
         print(
             "Predicted images have been saved in: "
@@ -853,7 +840,7 @@ class PytorchTrainer(ModelsTrainer):
 
         self.data_len = self.input_data_shape[0] // self.batch_size + int(self.input_data_shape[0] % self.batch_size != 0)
 
-        self.model = model_utils.select_model(
+        model = model_utils.select_model(
             model_name=self.model_name,
             input_shape=None,
             output_channels=None,
@@ -903,7 +890,7 @@ class PytorchTrainer(ModelsTrainer):
         os.makedirs(self.saving_path + "/Quality Control", exist_ok=True)
         logger = CSVLogger(self.saving_path + "/Quality Control", name="Logger")
 
-        self.trainer = L.Trainer(
+        trainer = L.Trainer(
             accelerator="gpu", 
             devices=-1,
             strategy="ddp_find_unused_parameters_true",
@@ -913,14 +900,14 @@ class PytorchTrainer(ModelsTrainer):
         )
 
         print('\n')
-        print(self.trainer.accelerator)
-        print(self.trainer.strategy)
+        print(trainer.accelerator)
+        print(trainer.strategy)
         print('\n')
         
         print("Training is going to start:")
         start = time.time()
 
-        self.trainer.fit(self.model, datamodule=self.data_module)
+        trainer.fit(model, datamodule=self.data_module)
 
         # Displaying the time elapsed for training
         dt = time.time() - start
@@ -976,38 +963,34 @@ class PytorchTrainer(ModelsTrainer):
         self.history = []
         print("Train information saved.")
 
-        self.already_trained = True
-
     def predict_images(self, result_folder_name=""):
         utils.set_seed(self.seed)
 
-        if not self.already_trained:
+        model = model_utils.select_model(
+            model_name=self.model_name,
+            scale_factor=self.scale_factor,
+            batch_size=self.batch_size,
+            save_basedir=self.saving_path,
+            model_configuration=self.config,
+            datagen_sampling_pdf=self.datagen_sampling_pdf,
+            checkpoint=os.path.join(self.saving_path, "best_checkpoint.pth"),
+            verbose=self.verbose,
+            state='predict'
+        )
 
-            self.model = model_utils.select_model(
-                model_name=self.model_name,
-                scale_factor=self.scale_factor,
-                batch_size=self.batch_size,
-                save_basedir=self.saving_path,
-                model_configuration=self.config,
-                datagen_sampling_pdf=self.datagen_sampling_pdf,
-                checkpoint=os.path.join(self.saving_path, "best_checkpoint.pth"),
-                verbose=self.verbose,
-                state='predict'
-            )
-
-            self.trainer = L.Trainer(
-                                accelerator="gpu", 
-                                devices=-1,
-                                strategy="ddp_find_unused_parameters_true",
-                            )
+        trainer = L.Trainer(
+                            accelerator="gpu", 
+                            devices=-1,
+                            strategy="ddp_find_unused_parameters_true",
+                        )
 
         print('\n')
-        print(self.trainer.accelerator)
-        print(self.trainer.strategy)
+        print(trainer.accelerator)
+        print(trainer.strategy)
         print('\n')
 
         print("Prediction is going to start:")
-        predictions = self.trainer.predict(self.model, dataloaders=self.data_module)
+        predictions = trainer.predict(model, dataloaders=self.data_module)
         print('prediction done')
         predictions = np.array(
             [
@@ -1019,11 +1002,9 @@ class PytorchTrainer(ModelsTrainer):
         os.makedirs(os.path.join(self.saving_path, "predicted_images"), exist_ok=True)
 
         for i, image in enumerate(predictions):
-            tf.keras.preprocessing.image.save_img(
+            io.imsave(
                 self.saving_path + "/predicted_images/" + self.test_filenames[i],
-                image,
-                data_format=None,
-                file_format=None,
+                image
             )
         print(
             "Predicted images have been saved in: "
@@ -1098,18 +1079,7 @@ def train_configuration(
     verbose=0,
     data_on_memory=0,
 ):
-    if config.model_name in PYTORCH_MODELS:
-        model_trainer = PytorchTrainer(
-            config,
-            train_lr_path, train_hr_path,
-            val_lr_path,  val_hr_path,
-            test_lr_path, test_hr_path,
-            saving_path,
-            verbose=verbose,
-            data_on_memory=data_on_memory,
-        )
-    elif config.model_name in TENSORFLOW_MODELS:
-        model_trainer = TensorflowTrainer(
+    model_trainer = get_model_trainer(
             config,
             train_lr_path, train_hr_path,
             val_lr_path, val_hr_path,
@@ -1118,10 +1088,15 @@ def train_configuration(
             verbose=verbose,
             data_on_memory=data_on_memory,
         )
-    else:
-        raise Exception("Not available model.")
 
-    return model_trainer.launch()
+        
+    model_trainer.prepare_data()
+    model_trainer.train_model()
+
+    model_trainer.predict_images()
+    model_trainer.eval_model()
+
+    return model_trainer.history
 
 
 def predict_configuration(
@@ -1133,66 +1108,15 @@ def predict_configuration(
     verbose=0,
     data_on_memory=0,
 ):
-
-    if config.dataset_name in ['ER', 'MT', 'F-actin']:
-        dataset_levels = {'ER':6, 'MT':9, 'F-actin':12}
-        levels = dataset_levels[config.dataset_name]
-        for i in range(1, levels+1):
-            level_folder = f"level_{i:02d}"
-            if "level" in test_lr_path:
-                test_lr_path = os.path.join(test_lr_path[:-9], level_folder)
-            else:
-                test_lr_path = os.path.join(test_lr_path, level_folder)
-
-            if config.model_name in PYTORCH_MODELS:
-                model_trainer = PytorchTrainer(
-                    config,
-                    train_lr_path, train_hr_path,
-                    val_lr_path, val_hr_path,
-                    test_lr_path, test_hr_path,
-                    saving_path,
-                    verbose=verbose,
-                    data_on_memory=data_on_memory,
-                )
-            elif config.model_name in TENSORFLOW_MODELS:
-                model_trainer = TensorflowTrainer(
-                    config,
-                    train_lr_path, train_hr_path,
-                    val_lr_path, val_hr_path,
-                    test_lr_path, test_hr_path,
-                    saving_path,
-                    verbose=verbose,
-                    data_on_memory=data_on_memory,
-                )
-            else:
-                raise Exception("Not available model.")
-
-            model_trainer.prepare_data()
-            model_trainer.predict_images(result_folder_name=level_folder)
-            model_trainer.eval_model(result_folder_name=level_folder)
-    else:
-        if config.model_name in PYTORCH_MODELS:
-            model_trainer = PytorchTrainer(
-                config,
-                train_lr_path, train_hr_path,
-                val_lr_path, val_hr_path,
-                test_lr_path, test_hr_path,
-                saving_path,
-                verbose=verbose,
-                data_on_memory=data_on_memory,
-            )
-        elif config.model_name in TENSORFLOW_MODELS:
-            model_trainer = TensorflowTrainer(
-                config,
-                train_lr_path, train_hr_path,
-                val_lr_path, val_hr_path,
-                test_lr_path, test_hr_path,
-                saving_path,
-                verbose=verbose,
-                data_on_memory=data_on_memory,
-            )
-        else:
-            raise Exception("Not available model.")
+    model_trainer = get_model_trainer(
+            config,
+            train_lr_path, train_hr_path,
+            val_lr_path, val_hr_path,
+            test_lr_path, test_hr_path,
+            saving_path,
+            verbose=verbose,
+            data_on_memory=data_on_memory,
+        )
 
     model_trainer.prepare_data()
     model_trainer.predict_images()

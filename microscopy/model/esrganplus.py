@@ -469,7 +469,7 @@ class RRDBNet(nn.Module):
 # VGG style Discriminator with input size 128*128
 class Discriminator_VGG_128(nn.Module):
     def __init__(
-        self, in_nc, base_nf, input_size, norm_type="batch", act_type="leakyrelu", mode="CNA"
+        self, in_nc, base_nf, input_size, scale_factor, norm_type="batch", act_type="leakyrelu", mode="CNA"
     ):
         super(Discriminator_VGG_128, self).__init__()
         # features
@@ -571,7 +571,7 @@ class Discriminator_VGG_128(nn.Module):
         # classifier
         self.classifier = nn.Sequential(
             # nn.Linear(512 * 4 * 4, 100), nn.LeakyReLU(0.2, True), nn.Linear(100, 1)
-            nn.Linear(base_nf * 8 * (input_size//16)**2, 100), nn.LeakyReLU(0.2, True), nn.Linear(100, 1)
+            nn.Linear(base_nf * 8 * ((input_size//32)*scale_factor)**2, 100), nn.LeakyReLU(0.2, True), nn.Linear(100, 1)
         )
 
     def forward(self, x):
@@ -641,9 +641,9 @@ def define_G(scale, nf=64, nb=23, gc=32):
 
 
 # Discriminator
-def define_D(base_nf=64, input_size=128):
+def define_D(base_nf=64, input_size=128, scale_factor=2):
     netD = Discriminator_VGG_128(
-        in_nc=1, base_nf=base_nf, input_size=input_size, norm_type="batch", mode="CNA", act_type="leakyrelu"
+        in_nc=1, base_nf=base_nf, input_size=input_size, scale_factor=scale_factor, norm_type="batch", mode="CNA", act_type="leakyrelu"
     )
 
     weights_init_kaiming_ = functools.partial(weights_init_kaiming, scale=1)
@@ -726,10 +726,10 @@ class ESRGANplus(L.LightningModule):
 
         # Free cuda memory
         torch.cuda.empty_cache()
-    
-        number_of_features = 32
-        number_of_blocks = 8
-        growth_channel = 8
+
+        number_of_features = 64 # 32 # 64
+        number_of_blocks = 23 # 8 # 23
+        growth_channel = 32 # 8 # 32
 
         # Initialize generator and load the checkpoint in case is given
         if gen_checkpoint is None:
@@ -740,10 +740,12 @@ class ESRGANplus(L.LightningModule):
             self.generator = define_G(scale=checkpoint["scale_factor"], nf=number_of_features, nb=number_of_blocks, gc=growth_channel)
             self.generator.load_state_dict(checkpoint["model_state_dict"])
             self.best_valid_loss = checkpoint["best_valid_loss"]
+            scale_factor = checkpoint["scale_factor"]
 
         # self.discriminator = define_D(base_nf=64)
         self.discriminator = define_D(base_nf=number_of_features,
-                                      input_size=self.hparams.additonal_configuration.used_dataset.patch_size_x)
+                                      input_size=self.hparams.additonal_configuration.used_dataset.patch_size_x,
+                                      scale_factor=scale_factor)
         
 
         self.generator_loss = GeneratorLoss()

@@ -5,7 +5,7 @@ import gc
 import os
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 import tensorflow as tf
 print(tf.config.list_physical_devices('GPU'))
@@ -26,19 +26,18 @@ def load_path(dataset_root, dataset_name, folder):
 # EM_down_4x
 # EM_old_crap_4x
 
-config_name = "config"
+config_name = "wo_level_1" # "config"
 
 @hydra.main(version_base=None, config_path="conf", config_name=config_name)
 def my_app(cfg: DictConfig) -> None:
     
-    dataset_combination = ["LiveFActinDataset"] #"LiveFActinDataset", "EM", "F-actin", "ER", "MT", "MT-SMLM_registered"
-    model_combination = ["unet", "rcan", "wdsr", "dfcan"]  # "unet", "rcan", "dfcan", "wdsr", "wgan", "esrganplus", "cddpm"
+    dataset_combination = ["F-actin_wo_level1"] #"LiveFActinDataset", "EM", "F-actin", "ER", "MT", "MT-SMLM_registered"
+    model_combination = ["unet"]  # "unet", "rcan", "dfcan", "wdsr", "wgan", "esrganplus", "cddpm"
     batch_size_combination = [4]
-    num_epochs_combination = [200]
-    lr_combination = [(0.001, 0.001),(0.0001, 0.0001)]
+    num_epochs_combination = [1]
+    lr_combination = [(0.001, 0.001)]
 
-
-    scheduler_combination = ['Fixed', 'OneCycle', 'CosineDecay'] #'Fixed', 'ReduceOnPlateau', 'OneCycle', 'CosineDecay', 'MultiStepScheduler'
+    scheduler_combination = ['OneCycle'] #'Fixed', 'ReduceOnPlateau', 'OneCycle', 'CosineDecay', 'MultiStepScheduler'
     optimizer_combination = ['adam']  #'adam', 'adamW', 'adamax', 'rms_prop', 'sgd'
     
     for dataset_name in dataset_combination:  

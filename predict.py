@@ -8,7 +8,7 @@ import shutil
 import numpy as np
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 def load_path(dataset_root, dataset_name, folder):
     if folder is not None:
@@ -29,7 +29,7 @@ def my_app(cfg: DictConfig) -> None:
     # base_folder = ''
     
     dataset_name = 'EM'
-    saving_path = './different_results/SRGAN_diff_crap/EM_down_4x/cs_5/EM/srgan/scale4/epc100_btch2_lr0.0001_optim-adam_lrsched-OneCycle_seed666_1'
+    saving_path = '/data/ihidalgo/MicroscoPy/results/EM/cddpm/scale4/epc1200_btch4_lr0.001_optim-adam_lrsched-OneCycle_seed666_1'
 
     actual_cfg = omegaconf.OmegaConf.load(os.path.join(saving_path, 'train_configuration.yaml'))
 
@@ -43,33 +43,67 @@ def my_app(cfg: DictConfig) -> None:
     val_hr_path = load_path(dataset_root, dataset_name, val_hr)
     test_lr_path = load_path(dataset_root, dataset_name, test_lr)
     test_hr_path = load_path(dataset_root, dataset_name, test_hr)
-
-    # cfg.hyperparam.seed = 666
     
-    for i in range(1):
+    # cfg.hyperparam.seed = 666
+
+    for i in range(10):
+
         random_seed = np.random.randint(0, 1000)
         actual_cfg.hyperparam.seed = random_seed
-        folder_name = f'{i:02d}_seed_{random_seed}' # same_seed' #
 
-        print(folder_name)
+        if dataset_name in ['ER', 'MT', 'F-actin']:
+            dataset_levels = {'ER':6, 'MT':9, 'F-actin':12}
+            levels = dataset_levels[dataset_name]
+            for j in range(1, levels+1):
+                
+                print(f'\n\nlevel: {j}\n\n')
 
-        model = predict_configuration(
-            config=actual_cfg,
-            train_lr_path=train_lr_path,
-            train_hr_path=train_hr_path,
-            val_lr_path=val_lr_path,
-            val_hr_path=val_hr_path,
-            test_lr_path=test_lr_path,
-            test_hr_path=test_hr_path,
-            saving_path=saving_path,
-            verbose=0,
-        )
-        del model
-        gc.collect()
+                level_folder = f'level_{j:02d}'
+                if 'level' in test_lr_path:
+                    test_lr_path = os.path.join(test_lr_path[:-9], level_folder)
+                else:
+                    test_lr_path = os.path.join(test_lr_path, level_folder)
 
-        os.makedirs(os.path.join(saving_path, folder_name))
-        shutil.move(os.path.join(saving_path, 'test_metrics'), os.path.join(saving_path, folder_name))
-        shutil.move(os.path.join(saving_path, 'predicted_images'), os.path.join(saving_path, folder_name))
+                folder_name = f'{level_folder}_{i:02d}_seed_{random_seed}'
+
+                model = predict_configuration(
+                    config=actual_cfg,
+                    train_lr_path=train_lr_path,
+                    train_hr_path=train_hr_path,
+                    val_lr_path=val_lr_path,
+                    val_hr_path=val_hr_path,
+                    test_lr_path=test_lr_path,
+                    test_hr_path=test_hr_path,
+                    saving_path=saving_path,
+                    verbose=0,
+                )
+                del model
+                gc.collect()
+
+                os.makedirs(os.path.join(saving_path, folder_name))
+                shutil.move(os.path.join(saving_path, 'test_metrics'), os.path.join(saving_path, folder_name))
+                shutil.move(os.path.join(saving_path, 'predicted_images'), os.path.join(saving_path, folder_name))
+        else:
+            
+            folder_name = f'{i:02d}_seed_{random_seed}' # same_seed' #
+
+            model = predict_configuration(
+                config=actual_cfg,
+                train_lr_path=train_lr_path,
+                train_hr_path=train_hr_path,
+                val_lr_path=val_lr_path,
+                val_hr_path=val_hr_path,
+                test_lr_path=test_lr_path,
+                test_hr_path=test_hr_path,
+                saving_path=saving_path,
+                verbose=0,
+            )
+            del model
+            gc.collect()
+
+            os.makedirs(os.path.join(saving_path, folder_name))
+            shutil.move(os.path.join(saving_path, 'test_metrics'), os.path.join(saving_path, folder_name))
+            shutil.move(os.path.join(saving_path, 'predicted_images'), os.path.join(saving_path, folder_name))
 
     # for dataset_name in dataset_combination: 
     #     cfg.dataset_name = dataset_name
