@@ -1,11 +1,3 @@
-import tensorflow as tf
-from tensorflow.keras.callbacks import ReduceLROnPlateau
-
-import torch
-
-from . import custom_callbacks
-
-
 #####################################
 #
 # Functions to select an optimizer.
@@ -74,6 +66,8 @@ def select_tensorflow_optimizer(
     Raises:
         Exception: If no available optimizer matches the provided optimizer name.
     """
+    import tensorflow as tf
+    
     if optimizer_name == "rms_prop":
         return tf.keras.optimizers.RMSprop(learning_rate=learning_rate,
                                            rho=additional_configuration.used_optim.rho,
@@ -129,6 +123,8 @@ def select_pytorch_optimizer(
     Raises:
         Exception: If no available optimizer is found.
     """
+    import torch 
+
     if check_point is None:
         if optimizer_name == "adam":
             if verbose > 0:
@@ -210,7 +206,7 @@ def select_pytorch_optimizer(
         elif optimizer_name == "adamW":
             optimizer =  torch.optim.AdamW(parameters)
         elif optimizer_name == "sgd":
-            optimizer =  tf.keras.optimizers.SGD(parameters)
+            optimizer =  torch.optim.SGD(parameters)
         else:
             raise Exception("No available optimizer.")
 
@@ -314,13 +310,16 @@ def select_tensorflow_lr_schedule(
     Raises:
         Exception: If the specified learning rate scheduler is not available.
     """
+    import tensorflow as tf
+    from tensorflow.keras.callbacks import ReduceLROnPlateau
+    from . import custom_callbacks_tf
     if lr_scheduler_name == "OneCycle":
         steps = data_len * num_epochs
         if verbose > 0:
             print('OneCycle scheduler has been selected')
             print(f'lr={learning_rate}')
             print(f'steps={steps}')
-        return custom_callbacks.OneCycleScheduler(learning_rate, steps)
+        return custom_callbacks_tf.OneCycleScheduler(learning_rate, steps)
     elif lr_scheduler_name == "ReduceOnPlateau":
         if verbose > 0:
             print('ReduceLROnPlateau scheduler has been selected')
@@ -353,7 +352,7 @@ def select_tensorflow_lr_schedule(
             print(f'lr={learning_rate}')
             print(f'lr_steps={lr_steps}')
             print(f'lr_rate_decay={additional_configuration.used_sched.lr_rate_decay}')
-        return custom_callbacks.MultiStepScheduler(
+        return custom_callbacks_tf.MultiStepScheduler(
             learning_rate,
             lr_steps=lr_steps,
             lr_rate_decay=additional_configuration.used_sched.lr_rate_decay # 0.5
@@ -396,6 +395,8 @@ def select_pytorch_lr_schedule(
     Raises:
         Exception: If the provided learning rate scheduler is not available.
     """
+    import torch
+    from . import custom_callbacks_pytorch
     if lr_scheduler_name == "OneCycle":
         if verbose > 0:
             print('OneCycle scheduler has been selected')

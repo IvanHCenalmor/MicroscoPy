@@ -25,16 +25,17 @@ def load_path(dataset_root, dataset_name, folder):
 # EM_down_2x
 # EM_down_4x
 # EM_old_crap_4x
+# wo_level_1
 
-config_name = "wo_level_1" # "config"
+config_name = "config"
 
 @hydra.main(version_base=None, config_path="conf", config_name=config_name)
 def my_app(cfg: DictConfig) -> None:
     
-    dataset_combination = ["F-actin_wo_level1"] #"LiveFActinDataset", "EM", "F-actin", "ER", "MT", "MT-SMLM_registered"
+    dataset_combination = ["EM"] #"LiveFActinDataset", "EM", "F-actin", "ER", "MT", "MT-SMLM_registered"
     model_combination = ["unet"]  # "unet", "rcan", "dfcan", "wdsr", "wgan", "esrganplus", "cddpm"
     batch_size_combination = [4]
-    num_epochs_combination = [1]
+    num_epochs_combination = [5]
     lr_combination = [(0.001, 0.001)]
 
     scheduler_combination = ['OneCycle'] #'Fixed', 'ReduceOnPlateau', 'OneCycle', 'CosineDecay', 'MultiStepScheduler'
@@ -59,7 +60,7 @@ def my_app(cfg: DictConfig) -> None:
                         for scheduler in scheduler_combination:
                             for optimizer in optimizer_combination:
 
-                                base_folder = 'results'
+                                base_folder = 'delete'
 
                                 cfg.model_name = model_name
                                 cfg.hyperparam.batch_size = batch_size

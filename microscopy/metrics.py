@@ -5,10 +5,10 @@ from tqdm import tqdm
 from skimage import metrics as skimage_metrics
 from skimage.util import img_as_ubyte
 
-# LPIPS metrics with AlexNet and VGG
-import lpips
-lpips_alex = lpips.LPIPS(net="alex", version="0.1")
-lpips_vgg = lpips.LPIPS(net="vgg", version="0.1")
+# # LPIPS metrics with AlexNet and VGG
+# import lpips
+# lpips_alex = lpips.LPIPS(net="alex", version="0.1")
+# lpips_vgg = lpips.LPIPS(net="vgg", version="0.1")
 
 # # Nanopyx metrics: Error map (RSE and RSP) and decorrelation analysis 
 # from nanopyx.core.transform.new_error_map import ErrorMap
@@ -79,17 +79,17 @@ def calculate_metrics(gt_image, predicted_image, wf_image):
     #
     # Calculate the LPIPS metrics
 
-    dict_metrics["alex"] = np.squeeze(
-            lpips_alex(gt_image_piq.float(), predicted_image_piq.float())
-            .detach()
-            .numpy()
-        )
+    # dict_metrics["alex"] = np.squeeze(
+    #         lpips_alex(gt_image_piq.float(), predicted_image_piq.float())
+    #         .detach()
+    #         .numpy()
+    #     )
 
-    dict_metrics["vgg"] = np.squeeze(
-        lpips_vgg(gt_image_piq.float(), predicted_image_piq.float())
-        .detach()
-        .numpy()
-    )
+    # dict_metrics["vgg"] = np.squeeze(
+    #     lpips_vgg(gt_image_piq.float(), predicted_image_piq.float())
+    #     .detach()
+    #     .numpy()
+    # )
 
     #
     #####################################
