@@ -14,6 +14,7 @@ from . import utils
 from . import model_utils
 from . import optimizer_scheduler_utils
 from . import custom_callbacks_tf
+from .metrics import calculate_metrics, get_metrics_dict
 
 from .tf_losses import ssim_loss
 from .trainers_utils import ModelsTrainer
@@ -52,8 +53,12 @@ class TensorflowTrainer(ModelsTrainer):
     def prepare_data(self):
         utils.set_seed(self.seed)
         if self.data_on_memory:
+            # In case you want to store the train and validation data (the patches) on memory
+
             if self.verbose > 0:
                 print('Data will be loaded on memory for all the epochs the same.')
+
+            # Load the patches for the training data
             X_train, Y_train, actual_scale_factor = datasets_utils.extract_random_patches_from_folder( 
                                                         lr_data_path = self.train_lr_path,
                                                         hr_data_path = self.train_hr_path,
@@ -62,17 +67,20 @@ class TensorflowTrainer(ModelsTrainer):
                                                         crappifier_name = self.crappifier_method,
                                                         lr_patch_shape = (self.lr_patch_size_x, self.lr_patch_size_y),
                                                         datagen_sampling_pdf = self.datagen_sampling_pdf)
+            # Expand their last dimenstions so that they have 1 channel (B, H, W, C))
             X_train = np.expand_dims(X_train, axis=-1)
             Y_train = np.expand_dims(Y_train, axis=-1)
 
+            # Store the shapes of both the input and output training data
             self.input_data_shape = X_train.shape
             self.output_data_shape = Y_train.shape
 
+            # Crete the training data generator
             train_generator = datasets_utils.get_train_val_generators(X_data=X_train,
                                                                 Y_data=Y_train,
                                                                 batch_size=self.batch_size)
 
-
+            # Load the images for the validation data
             X_val, Y_val, _ = datasets_utils.extract_random_patches_from_folder( 
                                                         lr_data_path = self.val_lr_path,
                                                         hr_data_path = self.val_hr_path,
@@ -81,12 +89,15 @@ class TensorflowTrainer(ModelsTrainer):
                                                         crappifier_name = self.crappifier_method,
                                                         lr_patch_shape = (self.lr_patch_size_x, self.lr_patch_size_y),
                                                         datagen_sampling_pdf = self.datagen_sampling_pdf)
+            # Expand their last dimenstions so that they have 1 channel (B, H, W, C))
             X_val = np.expand_dims(X_val, axis=-1)
             Y_val = np.expand_dims(Y_val, axis=-1)
 
+            # Store the shapes of both the input and output validation data
             self.val_input_data_shape = X_val.shape
             self.val_output_data_shape = Y_val.shape
 
+            # Create the validation data generator
             val_generator = datasets_utils.get_train_val_generators(X_data=X_val,
                                                              Y_data=Y_val,
                                                              batch_size=self.batch_size)
@@ -345,14 +356,11 @@ class TensorflowTrainer(ModelsTrainer):
         utils.set_seed(self.seed)
         print(f'Using seed: {self.seed}')
 
-        ground_truths = []
-        widefields = []
-        predictions = []
+        metrics = get_metrics_dict()
+
         print(f"Prediction of {self.model_name} is going to start:")
 
-        
-
-        for test_filename in self.test_filenames:
+        for idx, test_filename in enumerate(self.test_filenames):
             
             utils.set_seed(self.seed)
             lr_images, hr_images, _ = datasets_tf.extract_random_patches_from_folder(
@@ -368,18 +376,9 @@ class TensorflowTrainer(ModelsTrainer):
             hr_images = np.expand_dims(hr_images, axis=-1)
             lr_images = np.expand_dims(lr_images, axis=-1)
 
-            io.imsave(
-                os.path.join(self.saving_path, result_folder_name, "lr_img_from_dataset.tif"),
-                lr_images[0]
-            )
-            io.imsave(
-                os.path.join(self.saving_path, result_folder_name, "hr_img_from_dataset.tif"),
-                hr_images[0]
-            )
+            # Folder to save the predictions
+            os.makedirs(os.path.join(self.saving_path, "predicted_images", result_folder_name), exist_ok=True)
 
-            ground_truths.append(hr_images[0, ...])
-            widefields.append(lr_images[0, ...])
-            
             if self.model_name == "unet" or self.model_name == "cddpm":
                 if self.verbose > 0:
                     print("Padding will be added to the images.")
@@ -424,15 +423,6 @@ class TensorflowTrainer(ModelsTrainer):
                     width_padding=(width_padding[0]*self.scale_factor, width_padding[1]*self.scale_factor),
                 )
                 print(f'After paddins: {hr_images.shape}')
-
-                io.imsave(
-                    os.path.join(self.saving_path, result_folder_name, "lr_img_after_padding.tif"),
-                    lr_images[0]
-                )
-                io.imsave(
-                    os.path.join(self.saving_path, result_folder_name, "hr_img_after_padding.tif"),
-                    hr_images[0]
-                )
 
             if self.verbose > 0:
                 print(
@@ -489,11 +479,6 @@ class TensorflowTrainer(ModelsTrainer):
             else:
                 aux_prediction = model.predict(lr_images, batch_size=1)
 
-            io.imsave(
-                os.path.join(self.saving_path, result_folder_name, "aux_prediction.tif"),
-                aux_prediction[0]
-            )
-
             if self.model_name == "unet" or self.model_name == "cddpm":
                 print(f'Before removing padding: {aux_prediction.shape}')
                 aux_prediction = utils.remove_padding_for_Unet(
@@ -504,52 +489,24 @@ class TensorflowTrainer(ModelsTrainer):
                 )
                 print(f'After removing padding: {aux_prediction.shape}')
 
-            io.imsave(
-                os.path.join(self.saving_path, result_folder_name, "aux_prediction_after_removing_padding.tif"),
-                aux_prediction[0]
-            )
-
             # aux_prediction = datasets.normalization(aux_prediction)
             aux_prediction = np.clip(aux_prediction, a_min=0.0, a_max=1.0)
 
-            io.imsave(
-                os.path.join(self.saving_path, result_folder_name, "aux_prediction_after_clip.tif"),
-                aux_prediction[0]
-            )
-
             if len(aux_prediction.shape) == 4:
-                predictions.append(aux_prediction[0, ...])
+                prediction = aux_prediction[0, ...]
             elif len(aux_prediction.shape) == 3:
                 if aux_prediction.shape[-1] == 1:
-                    predictions.append(aux_prediction)
+                    prediction = aux_prediction
                 if aux_prediction.shape[0] == 1:
-                    predictions.append(np.expand_dims(aux_prediction[0,:,:], -1))
-
-        self.Y_test = ground_truths
-        self.predictions = predictions
-        self.X_test = widefields
-
-        # assert (np.max(self.Y_test) <= 1.0).all and (np.max(self.predictions) <= 1.0).all and (np.max(self.X_test) <= 1.0).all
-        # assert (np.min(self.Y_test) >= 0.0).all and (np.min(self.predictions) >= 0.0).all and (np.min(self.X_test) >= 0.0).all
-
-        if self.verbose > 0:
-            utils.print_info("predict_images() - Y_test", self.Y_test)
-            utils.print_info("predict_images() - predictions", self.predictions)
-            utils.print_info("predict_images() - X_test", self.X_test)
-
-        # Save the predictions
-        os.makedirs(os.path.join(self.saving_path, "predicted_images", result_folder_name), exist_ok=True)
-
-        for i, image in enumerate(predictions):
-
-            print(image.shape)
+                    prediction = np.expand_dims(aux_prediction[0,:,:], -1)
 
             io.imsave(
-                os.path.join(self.saving_path, "predicted_images", result_folder_name, os.path.splitext(self.test_filenames[i])[0] + '.tif'),
-                np.squeeze(image)
+                os.path.join(self.saving_path, "predicted_images", result_folder_name, os.path.splitext(self.test_filenames[idx])[0] + '.tif'),
+                np.squeeze(prediction)
             )
-        print(
-            "Predicted images have been saved in: "
-            + self.saving_path
-            + "/predicted_images"
-        )
+
+            aux_metrics = calculate_metrics(gt_image=hr_images[0, ...], predicted_image=prediction, wf_image=lr_images[0, ...])
+            for key, value in aux_metrics.items():
+                metrics[key].append(value)
+
+        self.test_metrics = metrics

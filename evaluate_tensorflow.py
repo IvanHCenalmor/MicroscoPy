@@ -35,7 +35,7 @@ def my_app(cfg: DictConfig) -> None:
     dataset_combination = ["EM"] #"LiveFActinDataset", "EM", "F-actin", "ER", "MT", "MT-SMLM_registered"
     model_combination = ["unet"]  # "unet", "rcan", "dfcan", "wdsr", "wgan", "esrganplus", "cddpm"
     batch_size_combination = [4]
-    num_epochs_combination = [5]
+    num_epochs_combination = [2]
     lr_combination = [(0.001, 0.001)]
 
     scheduler_combination = ['OneCycle'] #'Fixed', 'ReduceOnPlateau', 'OneCycle', 'CosineDecay', 'MultiStepScheduler'

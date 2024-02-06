@@ -122,20 +122,22 @@ def calculate_metrics(gt_image, predicted_image, wf_image):
     #
     #####################################
 
-    #####################################
-    #
-    # Calculate the ILNIQE
+    # #####################################
+    # #
+    # # Calculate the ILNIQE
     
-    # Temporally commented to avoid long evaluation times (83 seconds for each image)
-    if not all_equals:
-        dict_metrics['ilniqe'] = calculate_ilniqe(img_as_ubyte(predicted_image), 0,
-                                        input_order='HW', resize=True, version='python')
-    else: 
-        dict_metrics['ilniqe'] = np.nan
-    #####################################
+    # # Temporally commented to avoid long evaluation times (83 seconds for each image)
+    # if not all_equals:
+    #     dict_metrics['ilniqe'] = calculate_ilniqe(img_as_ubyte(predicted_image), 0,
+    #                                     input_order='HW', resize=True, version='python')
+    # else: 
+    #     dict_metrics['ilniqe'] = np.nan
+    # #####################################
 
     return dict_metrics
         
+def get_metrics_dict():
+    return {metric: [] for metric in metric_list}
 
 def obtain_metrics(gt_image_list, predicted_image_list, wf_image_list, test_metric_indexes):
     """
@@ -159,7 +161,7 @@ def obtain_metrics(gt_image_list, predicted_image_list, wf_image_list, test_metr
         The calculated metrics are stored in a dictionary with the metric names as keys and lists of values as their corresponding values.
     """
 
-    disct_metrics_lists = {metric: [] for metric in metric_list}
+    disct_metrics_lists = get_metrics_dict()
 
     for i in tqdm(range(len(gt_image_list))):
         disct_metrics_items = calculate_metrics(

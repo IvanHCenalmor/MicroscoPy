@@ -1,6 +1,3 @@
-from .trainers_tf import TensorflowTrainer
-from .trainers_torch import PytorchTrainer
-
 PYTORCH_MODELS = ["wgan", "esrganplus", "srgan"]
 TENSORFLOW_MODELS = ["rcan", "dfcan", "wdsr", "unet", "cddpm"]
 
@@ -14,6 +11,8 @@ def get_model_trainer(
     data_on_memory=0,
 ):
     if config.model_name in PYTORCH_MODELS:
+        from .trainers_torch import PytorchTrainer
+
         model_trainer = PytorchTrainer(
             config,
             train_lr_path, train_hr_path,
@@ -24,6 +23,8 @@ def get_model_trainer(
             data_on_memory=data_on_memory,
         )
     elif config.model_name in TENSORFLOW_MODELS:
+        from .trainers_tf import TensorflowTrainer
+
         model_trainer = TensorflowTrainer(
             config,
             train_lr_path, train_hr_path,

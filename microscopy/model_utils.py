@@ -1,7 +1,5 @@
 import numpy as np
 
-from . import model
-
 def select_model(
     model_name=None,
     input_shape=None,
@@ -72,7 +70,8 @@ def select_model(
     """
 
     if model_name == "unet":
-        return model.unet.preResUNet(
+        from .model import unet
+        return unet.preResUNet(
             output_channels=output_channels,
             numInitChannels=model_configuration.init_channels,
             image_shape=input_shape[1:],
@@ -83,14 +82,16 @@ def select_model(
             final_activation="linear",
         )
     elif model_name == "rcan":
-        return model.rcan.rcan(
+        from .model import rcan
+        return rcan.rcan(
             n_sub_block=int(np.log2(scale_factor)),
             filters=model_configuration.num_filters,
             out_channels=1,
         )
 
     elif model_name == "dfcan":
-        return model.dfcan.DFCAN(
+        from .model import dfcan
+        return dfcan.DFCAN(
             (input_shape[1:]),
             scale=scale_factor,
             n_ResGroup=model_configuration.n_ResGroup,
@@ -98,14 +99,16 @@ def select_model(
         )
 
     elif model_name == "wdsr":
+        from .model import wdsr
         # Custom WDSR B model (0.62M parameters)
-        return model.wdsr.wdsr_b(
+        return wdsr.wdsr_b(
             scale=scale_factor,
             num_res_blocks=model_configuration.num_res_blocks,
         )
 
     elif model_name == "cddpm":
-        return model.cddpm.DiffusionModel(
+        from .model import cddpm
+        return cddpm.DiffusionModel(
             image_shape=input_shape[1:],
             widths=model_configuration.widths,
             block_depth=model_configuration.block_depth,
@@ -120,8 +123,9 @@ def select_model(
         )
 
     elif model_name == "wgan":
+        from .model import wgan
         print(model_configuration)
-        return model.wgan.WGANGP(
+        return wgan.WGANGP(
             g_layers=model_configuration.used_model.g_layers,
             recloss=model_configuration.used_model.recloss,
             lambda_gp=model_configuration.used_model.lambda_gp,
@@ -142,7 +146,8 @@ def select_model(
         )
 
     elif model_name == "esrganplus":
-        return model.esrganplus.ESRGANplus(
+        from .model import esrganplus
+        return esrganplus.ESRGANplus(
             datagen_sampling_pdf=datagen_sampling_pdf,
             n_critic_steps=model_configuration.used_model.n_critic_steps,
             data_len=data_len,
@@ -161,7 +166,8 @@ def select_model(
         )
     
     elif model_name == "srgan":
-        return model.srgan.SRGAN(
+        from .model import srgan
+        return srgan.SRGAN(
             datagen_sampling_pdf=datagen_sampling_pdf,
             n_critic_steps=model_configuration.used_model.n_critic_steps,
             data_len=data_len,

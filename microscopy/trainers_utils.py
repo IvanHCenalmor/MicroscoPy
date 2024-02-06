@@ -205,18 +205,12 @@ class ModelsTrainer:
             utils.print_info("eval_model() - self.X_test", self.X_test)
 
         print("The predictions will be evaluated:")
-        metrics_dict = metrics.obtain_metrics(
-            gt_image_list=self.Y_test,
-            predicted_image_list=self.predictions,
-            wf_image_list=self.X_test,
-            test_metric_indexes=self.test_metric_indexes,
-        )
-
+        metrics_dict = self.test_metrics 
+        
         os.makedirs(os.path.join(self.saving_path, "test_metrics", result_folder_name), exist_ok=True)
 
         for key in metrics_dict.keys():
             if len(metrics_dict[key]) > 0:
-                print("{}: {}".format(key, np.mean(metrics_dict[key])))
                 np.save(
                     os.path.join(self.saving_path, "test_metrics", result_folder_name, f"{key}.npy"),
                     metrics_dict[key],
