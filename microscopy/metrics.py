@@ -4,15 +4,16 @@ from tqdm import tqdm
 
 from skimage import metrics as skimage_metrics
 from skimage.util import img_as_ubyte
+from .utils import min_max_normalization as normalization
 
 # # LPIPS metrics with AlexNet and VGG
-# import lpips
-# lpips_alex = lpips.LPIPS(net="alex", version="0.1")
-# lpips_vgg = lpips.LPIPS(net="vgg", version="0.1")
+import lpips
+lpips_alex = lpips.LPIPS(net="alex", version="0.1")
+lpips_vgg = lpips.LPIPS(net="vgg", version="0.1")
 
 # # Nanopyx metrics: Error map (RSE and RSP) and decorrelation analysis 
-# from nanopyx.core.transform.new_error_map import ErrorMap
-# from nanopyx.core.analysis.decorr import DecorrAnalysis
+from nanopyx.core.transform import ErrorMap
+from nanopyx.core.analysis.decorr import DecorrAnalysis
 
 # ILNIQE (in a local file)
 from .ILNIQE import calculate_ilniqe
@@ -79,17 +80,17 @@ def calculate_metrics(gt_image, predicted_image, wf_image):
     #
     # Calculate the LPIPS metrics
 
-    # dict_metrics["alex"] = np.squeeze(
-    #         lpips_alex(gt_image_piq.float(), predicted_image_piq.float())
-    #         .detach()
-    #         .numpy()
-    #     )
+    dict_metrics["alex"] = np.squeeze(
+            lpips_alex(gt_image_piq.float(), predicted_image_piq.float())
+            .detach()
+            .numpy()
+        )
 
-    # dict_metrics["vgg"] = np.squeeze(
-    #     lpips_vgg(gt_image_piq.float(), predicted_image_piq.float())
-    #     .detach()
-    #     .numpy()
-    # )
+    dict_metrics["vgg"] = np.squeeze(
+        lpips_vgg(gt_image_piq.float(), predicted_image_piq.float())
+        .detach()
+        .numpy()
+    )
 
     #
     #####################################
@@ -98,40 +99,40 @@ def calculate_metrics(gt_image, predicted_image, wf_image):
     #
     # Calculate the Nanopyx metrics
 
-    # error_map = ErrorMap()
-    # error_map.optimise(wf_image, gt_image)
-    # dict_metrics["gt_rse"] = error_map.getRSE()
-    # dict_metrics["gt_rsp"] = error_map.getRSP()
+    error_map = ErrorMap()
+    error_map.optimise(wf_image, gt_image)
+    dict_metrics["gt_rse"] = error_map.getRSE()
+    dict_metrics["gt_rsp"] = error_map.getRSP()
 
-    # if not all_equals:
-    #     error_map = ErrorMap()
-    #     error_map.optimise(wf_image, predicted_image)
-    #     dict_metrics["pred_rse"] = error_map.getRSE()
-    #     dict_metrics["pred_rsp"] = error_map.getRSP()
-    # else: 
-    #     dict_metrics["pred_rse"] = np.nan
-    #     dict_metrics["pred_rsp"] = np.nan
+    if not all_equals:
+        error_map = ErrorMap()
+        error_map.optimise(wf_image, predicted_image)
+        dict_metrics["pred_rse"] = error_map.getRSE()
+        dict_metrics["pred_rsp"] = error_map.getRSP()
+    else: 
+        dict_metrics["pred_rse"] = np.nan
+        dict_metrics["pred_rsp"] = np.nan
 
-    # if not all_equals:
-    #     decorr_calculator_raw = DecorrAnalysis()
-    #     decorr_calculator_raw.run_analysis(predicted_image)
-    #     dict_metrics["decor"] = decorr_calculator_raw.resolution
-    # else: 
-    #     dict_metrics["decor"] = np.nan
+    if not all_equals:
+        decorr_calculator_raw = DecorrAnalysis()
+        decorr_calculator_raw.run_analysis(predicted_image)
+        dict_metrics["decor"] = decorr_calculator_raw.resolution
+    else: 
+        dict_metrics["decor"] = np.nan
 
     #
     #####################################
 
-    # #####################################
-    # #
-    # # Calculate the ILNIQE
+    #####################################
+    #
+    # Calculate the ILNIQE
     
-    # # Temporally commented to avoid long evaluation times (83 seconds for each image)
-    # if not all_equals:
-    #     dict_metrics['ilniqe'] = calculate_ilniqe(img_as_ubyte(predicted_image), 0,
-    #                                     input_order='HW', resize=True, version='python')
-    # else: 
-    #     dict_metrics['ilniqe'] = np.nan
+    # Temporally commented to avoid long evaluation times (83 seconds for each image)
+    if not all_equals:
+        dict_metrics['ilniqe'] = calculate_ilniqe(img_as_ubyte(predicted_image), 0,
+                                        input_order='HW', resize=True, version='python')
+    else: 
+        dict_metrics['ilniqe'] = np.nan
     # #####################################
 
     return dict_metrics

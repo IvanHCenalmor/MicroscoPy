@@ -6,7 +6,7 @@ import gc
 import os
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 def load_path(dataset_root, dataset_name, folder):
     if folder is not None:
@@ -17,7 +17,7 @@ def load_path(dataset_root, dataset_name, folder):
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def my_app(cfg: DictConfig) -> None:
 
-    for dataset_name in os.listdir(os.path.join('results')): 
+    for dataset_name in ["LiveFActinDataset"]: #  "LiveFActinDataset", "EM", "F-actin", "ER", "MT", "MT-SMLM_registered" 
         cfg.dataset_name = dataset_name
         train_lr, train_hr, val_lr, val_hr, test_lr, test_hr = cfg.used_dataset.data_paths
 
@@ -36,14 +36,16 @@ def my_app(cfg: DictConfig) -> None:
 
                     actual_cfg = omegaconf.OmegaConf.load(os.path.join(config_path, 'train_configuration.yaml'))
 
-                    weights_path = os.path.join(config_path, "weights_best.h5")
                     if (
-                        os.path.exists(weights_path) and not os.path.exists(os.path.join(config_path, "test_metrics")) 
+                        (os.path.exists(os.path.join(config_path, "weights_best.h5")) or 
+                         os.path.exists(os.path.join(config_path, "best_checkpoint.pth")))
                     ):
-                    
-                        print(f"{config_path} - will be evalauted.")
-                        try :
+                        if (
+                            os.path.exists(os.path.join(config_path, "test_metrics")) and 
+                            len(os.listdir(os.path.join(config_path, "test_metrics"))) < 4
+                        ):
 
+                            print(f"{config_path} - will be evalauted.")
                             model = predict_configuration(
                                 config=actual_cfg,
                                 train_lr_path=train_lr_path,
@@ -53,18 +55,12 @@ def my_app(cfg: DictConfig) -> None:
                                 test_lr_path=test_lr_path,
                                 test_hr_path=test_hr_path,
                                 saving_path=config_path,
-                                verbose=1
+                                verbose=0
                             )
                             del model
                             gc.collect()
-                        except Exception as e:
-                            print(f"{config_path} - model combination GAVE ERROR.")
-                            print(e)
                     else:
-                        if not os.path.exists(weights_path):
-                            print(f"{config_path} - model combination is not trained, therefore the prediction cannot be done.")
-                        elif os.path.exists(os.path.join(config_path, "test_metrics")):
-                            print(f"{config_path} - has already predictions done.")
-                        else:
-                            print(f'{config_path} - SOMETHIN STRANGE.')
+                        print(f"{config_path} - model combination is not trained, therefore the prediction cannot be done.")
+                    
+                    print()
 my_app()

@@ -363,7 +363,7 @@ class TensorflowTrainer(ModelsTrainer):
         for idx, test_filename in enumerate(self.test_filenames):
             
             utils.set_seed(self.seed)
-            lr_images, hr_images, _ = datasets_tf.extract_random_patches_from_folder(
+            original_lr_images, original_hr_images, _ = datasets_tf.extract_random_patches_from_folder(
                 hr_data_path=self.test_hr_path,
                 lr_data_path=self.test_lr_path,
                 filenames=[test_filename],
@@ -373,8 +373,8 @@ class TensorflowTrainer(ModelsTrainer):
                 datagen_sampling_pdf=1,
             )
 
-            hr_images = np.expand_dims(hr_images, axis=-1)
-            lr_images = np.expand_dims(lr_images, axis=-1)
+            original_hr_images = np.expand_dims(original_hr_images, axis=-1)
+            original_lr_images = np.expand_dims(original_lr_images, axis=-1)
 
             # Folder to save the predictions
             os.makedirs(os.path.join(self.saving_path, "predicted_images", result_folder_name), exist_ok=True)
@@ -385,20 +385,20 @@ class TensorflowTrainer(ModelsTrainer):
                     print("LR images before padding:")
                     print(
                         "LR images - shape:{} dtype:{}".format(
-                            lr_images.shape, lr_images.dtype
+                            original_lr_images.shape, original_lr_images.dtype
                         )
                     )
 
                 if self.model_name == "unet":
                     height_padding, width_padding = utils.calculate_pad_for_Unet(
-                        lr_img_shape=lr_images[0].shape,
+                        lr_img_shape=original_lr_images[0].shape,
                         depth_Unet=self.config.used_model.depth,
                         is_pre=True,
                         scale=self.scale_factor,
                     )
                 else:
                     height_padding, width_padding = utils.calculate_pad_for_Unet(
-                        lr_img_shape=lr_images[0].shape,
+                        lr_img_shape=original_lr_images[0].shape,
                         depth_Unet=self.config.used_model.block_depth,
                         is_pre=True,
                         scale=self.scale_factor,
@@ -411,14 +411,14 @@ class TensorflowTrainer(ModelsTrainer):
                     print("No padding has been needed to be added.")
 
                 lr_images = utils.add_padding_for_Unet(
-                    lr_imgs=lr_images,
+                    lr_imgs=original_lr_images,
                     height_padding=height_padding,
                     width_padding=width_padding,
                 )
 
-                print(f'Before paddins: {hr_images.shape}')
+                print(f'Before paddins: {original_hr_images.shape}')
                 hr_images = utils.add_padding_for_Unet(
-                    lr_imgs=hr_images,
+                    lr_imgs=original_hr_images,
                     height_padding=(height_padding[0]*self.scale_factor, height_padding[1]*self.scale_factor),
                     width_padding=(width_padding[0]*self.scale_factor, width_padding[1]*self.scale_factor),
                 )
@@ -505,7 +505,7 @@ class TensorflowTrainer(ModelsTrainer):
                 np.squeeze(prediction)
             )
 
-            aux_metrics = calculate_metrics(gt_image=hr_images[0, ...], predicted_image=prediction, wf_image=lr_images[0, ...])
+            aux_metrics = calculate_metrics(gt_image=original_hr_images[0, ...], predicted_image=prediction, wf_image=original_lr_images[0, ...])
             for key, value in aux_metrics.items():
                 metrics[key].append(value)
 
