@@ -90,3 +90,26 @@ def predict_configuration(
     model_trainer.prepare_data()
     model_trainer.predict_images()
     model_trainer.eval_model()
+
+
+def calculate_results(
+    config,
+    train_lr_path, train_hr_path,
+    val_lr_path, val_hr_path,
+    test_lr_path, test_hr_path,
+    saving_path,
+    verbose=0,
+    data_on_memory=0,
+):
+    model_trainer = get_model_trainer(
+            config,
+            train_lr_path, train_hr_path,
+            val_lr_path, val_hr_path,
+            test_lr_path, test_hr_path,
+            saving_path,
+            verbose=verbose,
+            data_on_memory=data_on_memory,
+        )
+
+    model_trainer.calculate_metrics_from_zero()
+    model_trainer.eval_model()

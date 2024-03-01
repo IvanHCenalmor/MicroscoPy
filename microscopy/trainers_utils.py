@@ -3,7 +3,7 @@ import os
 
 from . import datasets_utils
 from . import utils
-from . import metrics
+from .metrics import calculate_metrics, get_metrics_dict
 
 class ModelsTrainer:
     def __init__(
@@ -195,6 +195,44 @@ class ModelsTrainer:
 
     def predict_images(self, result_folder_name=""):
         raise NotImplementedError("predict_images() not implemented")
+
+    def calculate_metrics_from_zero(self, result_folder_name=""):
+
+        utils.set_seed(self.seed)
+        print(f'Using seed: {self.seed}')
+
+        metrics = get_metrics_dict()
+
+        print(f"Prediction of {self.model_name} is going to start:")
+
+        for idx, test_filename in enumerate(self.test_filenames):
+            
+            utils.set_seed(self.seed)
+            original_lr_images, original_hr_images, _ = datasets_utils.extract_random_patches_from_folder(
+                hr_data_path=self.test_hr_path,
+                lr_data_path=self.test_lr_path,
+                filenames=[test_filename],
+                scale_factor=self.scale_factor,
+                crappifier_name=self.crappifier_method,
+                lr_patch_shape=None,
+                datagen_sampling_pdf=1,
+            )
+
+            original_hr_images = np.expand_dims(original_hr_images, axis=-1)
+            original_lr_images = np.expand_dims(original_lr_images, axis=-1)
+
+            # aux_prediction = datasets.normalization(aux_prediction)
+            prediction = datasets_utils.read_image(os.path.join(self.saving_path, "predicted_images", result_folder_name, self.test_filenames[idx])) #os.path.splitext(self.test_filenames[idx])[0] + '.tif'))
+            prediction = np.expand_dims(prediction, axis=-1)
+
+            aux_metrics = calculate_metrics(gt_image=original_hr_images[0, ...], 
+                                            predicted_image=prediction, 
+                                            wf_image=original_lr_images[0, ...])
+            for key, value in aux_metrics.items():
+                metrics[key].append(value)
+
+        self.test_metrics = metrics
+
 
     def eval_model(self, result_folder_name=""):
         utils.set_seed(self.seed)

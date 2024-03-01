@@ -1,4 +1,4 @@
-from microscopy.trainers import predict_configuration
+from microscopy.trainers import calculate_results
 from omegaconf import DictConfig
 import omegaconf
 import hydra
@@ -14,10 +14,12 @@ def load_path(dataset_root, dataset_name, folder):
     else:
         return None
 
+result_path = '/Users/ihidalgo/Documents/SR_Paper/RCAN_different_data'
+
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def my_app(cfg: DictConfig) -> None:
 
-    for dataset_name in ["LiveFActinDataset"]: #  "LiveFActinDataset", "EM", "F-actin", "ER", "MT", "MT-SMLM_registered" 
+    for dataset_name in sorted(os.listdir(result_path)): #["LiveFActinDataset"]: #  "LiveFActinDataset", "EM", "F-actin", "ER", "MT", "MT-SMLM_registered" 
         cfg.dataset_name = dataset_name
         train_lr, train_hr, val_lr, val_hr, test_lr, test_hr = cfg.used_dataset.data_paths
 
@@ -29,10 +31,10 @@ def my_app(cfg: DictConfig) -> None:
         test_lr_path = load_path(dataset_root, dataset_name, test_lr)
         test_hr_path = load_path(dataset_root, dataset_name, test_hr)
 
-        for model_name in os.listdir(os.path.join('results', dataset_name)): 
-            for scale_folder in os.listdir(os.path.join('results', dataset_name, model_name)): 
-                for config in os.listdir(os.path.join('results', dataset_name, model_name, scale_folder)):
-                    config_path = os.path.join('results', dataset_name, model_name, scale_folder, config)
+        for model_name in os.listdir(os.path.join(result_path, dataset_name)): 
+            for scale_folder in os.listdir(os.path.join(result_path, dataset_name, model_name)): 
+                for config in os.listdir(os.path.join(result_path, dataset_name, model_name, scale_folder)):
+                    config_path = os.path.join(result_path, dataset_name, model_name, scale_folder, config)
 
                     actual_cfg = omegaconf.OmegaConf.load(os.path.join(config_path, 'train_configuration.yaml'))
 
@@ -46,7 +48,7 @@ def my_app(cfg: DictConfig) -> None:
                         ):
 
                             print(f"{config_path} - will be evalauted.")
-                            model = predict_configuration(
+                            model = calculate_results(
                                 config=actual_cfg,
                                 train_lr_path=train_lr_path,
                                 train_hr_path=train_hr_path,
